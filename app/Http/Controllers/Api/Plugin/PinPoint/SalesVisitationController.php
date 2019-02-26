@@ -84,7 +84,7 @@ class SalesVisitationController extends Controller
         $salesVisitation->phone = $request->get('phone');
         $salesVisitation->address = $request->get('address');
         $salesVisitation->sub_district = $request->get('sub_district');
-        $salesVisitation->village = $request->get('village');
+        $salesVisitation->district = $request->get('district');
         $salesVisitation->latitude = $request->get('latitude');
         $salesVisitation->longitude = $request->get('longitude');
         $salesVisitation->group = $request->get('group');

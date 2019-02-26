@@ -29,12 +29,8 @@ class Form extends PointModel
      *
      * @return bool
      */
-    public function usesUserLogs($user_logs = null)
+    public function usesUserLogs()
     {
-        if (is_bool($user_logs)) {
-          $this->user_logs = $user_logs;
-        }
-
         return $this->user_logs;
     }
 
