@@ -20,15 +20,36 @@ class TenantMiddleware
     {
         if ($request->header('Tenant')) {
             // Ignore this, because this subdomain is not allowed
-            if ($request->header('Tenant') === 'cloud') {
+            if ($request->header('Tenant') === 'cloud' || $request->header('Tenant') === 'localhost:8080') {
                 return $next($request);
             }
 
             // Permission denied, the project is not owned by that user
             if (auth()->user()) {
-                $project = Project::where('code', $request->header('Tenant'))->first();
+                $authUser = auth()->user();
+                $request->merge(compact('authUser'));
+
+                $project = Project::join('project_preferences', 'project_preferences.project_id', '=', 'projects.id')
+                    ->where('code', $request->header('Tenant'))
+                    ->select('projects.*')
+                    ->with('preference')
+                    ->first();
+
                 if (! $project) {
                     return $next($request);
+                }
+
+                // Update mail configuration on the fly
+                if ($project->preference) {
+                    config()->set('mail.driver', $project->preference->mail_driver);
+                    config()->set('mail.host', $project->preference->mail_host);
+                    config()->set('mail.username', $project->preference->mail_username);
+                    config()->set('mail.password', $project->preference->mail_password);
+                    config()->set('mail.from.name', $project->preference->mail_from_name);
+                    config()->set('mail.from.address', $project->preference->mail_from_address);
+                    config()->set('mail.port', $project->preference->mail_port);
+                    config()->set('mail.encryption', $project->preference->mail_encryption);
+                    config()->set('mail.secret', $project->preference->mail_secret);
                 }
 
                 $projectUser = ProjectUser::where('project_id', $project->id)->where('user_id', auth()->user()->id);
