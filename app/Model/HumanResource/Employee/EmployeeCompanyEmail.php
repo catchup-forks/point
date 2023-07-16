@@ -2,10 +2,10 @@
 
 namespace App\Model\HumanResource\Employee\Employee;
 
+use App\Model\MasterModel;
 use App\Model\HumanResource\Employee\Employee;
-use Illuminate\Database\Eloquent\Model;
 
-class EmployeeCompanyEmail extends Model
+class EmployeeCompanyEmail extends MasterModel
 {
     protected $connection = 'tenant';
 

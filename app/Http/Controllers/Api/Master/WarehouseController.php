@@ -21,9 +21,11 @@ class WarehouseController extends Controller
      */
     public function index(Request $request)
     {
-        $limit = $request->input('limit') ?? 0;
+        $warehouses = Warehouse::eloquentFilter($request);
 
-        return new WarehouseCollection(Warehouse::paginate($limit));
+        $warehouses = pagination($warehouses, $request->get('limit'));
+
+        return new WarehouseCollection($warehouses);
     }
 
     /**
@@ -36,10 +38,7 @@ class WarehouseController extends Controller
     public function store(StoreWarehouseRequest $request)
     {
         $warehouse = new Warehouse;
-        $warehouse->code = $request->input('code');
-        $warehouse->name = $request->input('name');
-        $warehouse->address = $request->input('address');
-        $warehouse->phone = $request->input('phone');
+        $warehouse->fill($request->all());
         $warehouse->save();
 
         return new WarehouseResource($warehouse);
@@ -48,13 +47,16 @@ class WarehouseController extends Controller
     /**
      * Display the specified resource.
      *
+     * @param  Request $request
      * @param  int $id
      *
      * @return \App\Http\Resources\Master\Warehouse\WarehouseResource
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        return new WarehouseResource(Warehouse::findOrFail($id));
+        $warehouse = Warehouse::eloquentFilter($request)->findOrFail($id);
+        
+        return new WarehouseResource($warehouse);
     }
 
     /**
@@ -68,10 +70,7 @@ class WarehouseController extends Controller
     public function update(UpdateWarehouseRequest $request, $id)
     {
         $warehouse = Warehouse::findOrFail($id);
-        $warehouse->code = $request->input('code');
-        $warehouse->name = $request->input('name');
-        $warehouse->address = $request->input('address');
-        $warehouse->phone = $request->input('phone');
+        $warehouse->fill($request->all());
         $warehouse->save();
 
         return new WarehouseResource($warehouse);

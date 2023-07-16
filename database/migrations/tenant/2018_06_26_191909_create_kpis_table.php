@@ -18,18 +18,15 @@ class CreateKpisTable extends Migration
             $table->unsignedInteger('employee_id')->index();
             $table->unsignedInteger('scorer_id')->index();
             $table->string('name');
-            $table->date('date');
+            $table->datetime('date');
+            $table->unsignedInteger('created_by')->index()->nullable();
+            $table->unsignedInteger('updated_by')->index()->nullable();
             $table->timestamps();
 
-            $table->foreign('employee_id')
-                ->references('id')
-                ->on('employees')
-                ->onDelete('cascade');
-
-            $table->foreign('scorer_id')
-                ->references('id')
-                ->on('users')
-                ->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            $table->foreign('scorer_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

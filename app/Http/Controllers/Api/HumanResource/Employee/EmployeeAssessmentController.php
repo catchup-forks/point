@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Model\HumanResource\Kpi\Kpi;
 use App\Model\HumanResource\Kpi\KpiGroup;
+use App\Model\HumanResource\Kpi\KpiScore;
 use App\Model\HumanResource\Kpi\KpiIndicator;
 use App\Http\Resources\HumanResource\Kpi\KpiCategory\KpiResource;
 use App\Http\Resources\HumanResource\Kpi\KpiCategory\KpiCollection;
@@ -33,13 +34,23 @@ class EmployeeAssessmentController extends Controller
             ->addSelect(DB::raw('sum(kpi_indicators.score_percentage) / count(DISTINCT kpis.id) as score_percentage'))
             ->addSelect(DB::raw('count(DISTINCT kpis.id) as num_of_scorer'));
 
-        if ($type === 'all') $kpis = $kpis->groupBy('kpis.id');
-        if ($type === 'daily') $kpis = $kpis->groupBy('kpis.date');
-        if ($type === 'weekly') $kpis = $kpis->groupBy(DB::raw('yearweek(kpis.date)'));
-        if ($type === 'monthly') $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'), DB::raw('month(kpis.date)'));
-        if ($type === 'yearly') $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'));
+        if ($type === 'all') {
+            $kpis = $kpis->groupBy('kpis.id');
+        }
+        if ($type === 'daily') {
+            $kpis = $kpis->groupBy('kpis.date');
+        }
+        if ($type === 'weekly') {
+            $kpis = $kpis->groupBy(DB::raw('yearweek(kpis.date)'));
+        }
+        if ($type === 'monthly') {
+            $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'), DB::raw('month(kpis.date)'));
+        }
+        if ($type === 'yearly') {
+            $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'));
+        }
 
-        $kpis = $kpis->where('employee_id', $employeeId)->orderBy('kpis.date', 'asc')->paginate(20);
+        $kpis = $kpis->where('employee_id', $employeeId)->orderBy('kpis.date', 'asc')->get();
 
         $dates = [];
         $scores = [];
@@ -95,6 +106,14 @@ class EmployeeAssessmentController extends Controller
                 $kpiIndicator->score_percentage = $kpiIndicator->weight * $kpiIndicator->score / $kpiIndicator->target;
                 $kpiIndicator->score_description = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['description'];
                 $kpiIndicator->save();
+
+                for ($scoreIndex = 0; $scoreIndex < count($template['groups'][$groupIndex]['indicators'][$indicatorIndex]['scores']); $scoreIndex++) {
+                    $kpiScore = new KpiScore();
+                    $kpiScore->kpi_indicator_id = $kpiIndicator->id;
+                    $kpiScore->description = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['scores'][$scoreIndex]['description'];
+                    $kpiScore->score = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['scores'][$scoreIndex]['score'];
+                    $kpiScore->save();
+                }
             }
         }
 
@@ -133,9 +152,35 @@ class EmployeeAssessmentController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $employeeId, $id)
     {
-        //
+        $template = $request->get('template');
+
+        DB::connection('tenant')->beginTransaction();
+
+        $kpi = Kpi::findOrFail($id);
+        $kpi->date = date('Y-m-d', strtotime($request->get('date')));
+        $kpi->save();
+
+        for ($groupIndex = 0; $groupIndex < count($template['groups']); $groupIndex++) {
+            $kpiGroup = KpiGroup::findOrFail($template['groups'][$groupIndex]['id']);
+
+            for ($indicatorIndex = 0; $indicatorIndex < count($template['groups'][$groupIndex]['indicators']); $indicatorIndex++) {
+                $kpiIndicator = KpiIndicator::findOrFail($template['groups'][$groupIndex]['indicators'][$indicatorIndex]['id']);
+                $kpiIndicator->kpi_group_id = $kpiGroup->id;
+                $kpiIndicator->name = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['name'];
+                $kpiIndicator->weight = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['weight'];
+                $kpiIndicator->target = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['target'];
+                $kpiIndicator->score = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['score'];
+                $kpiIndicator->score_percentage = $kpiIndicator->weight * $kpiIndicator->score / $kpiIndicator->target;
+                $kpiIndicator->score_description = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['description'];
+                $kpiIndicator->save();
+            }
+        }
+
+        DB::connection('tenant')->commit();
+
+        return new KpiResource($kpi);
     }
 
     /**

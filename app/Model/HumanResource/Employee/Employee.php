@@ -2,27 +2,16 @@
 
 namespace App\Model\HumanResource\Employee;
 
+use App\Model\MasterModel;
+use App\Model\Finance\Payment\Payment;
+use App\Model\HumanResource\Kpi\KpiTemplate;
+use App\Model\HumanResource\Employee\Employee\EmployeePhone;
 use App\Model\HumanResource\Employee\Employee\EmployeeAddress;
 use App\Model\HumanResource\Employee\Employee\EmployeeCompanyEmail;
-use App\Model\HumanResource\Employee\Employee\EmployeePhone;
-use App\Model\HumanResource\Kpi\KpiTemplate;
-use App\Model\Master\Person;
-use App\Traits\EloquentFilters;
-use Illuminate\Database\Eloquent\Model;
 
-class Employee extends Model
+class Employee extends MasterModel
 {
     protected $connection = 'tenant';
-
-    use EloquentFilters;
-
-    /**
-     * Get the person that owns the employee.
-     */
-    public function person()
-    {
-        return $this->belongsTo(get_class(new Person()), 'person_id');
-    }
 
     /**
      * Get the group that owns the employee.
@@ -126,5 +115,13 @@ class Employee extends Model
     public function scorers()
     {
         return $this->belongsToMany('App\Model\Master\User', 'employee_scorer', 'employee_id', 'user_id');
+    }
+
+    /**
+     * Get the customer's payment.
+     */
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'paymentable');
     }
 }
